@@ -46,17 +46,24 @@ class SimpleOutlookConfig(BaseConnectorConfig):
     outlook_folders: t.List[str] = field(default_factory=list)
     recursive: bool = False
     registry_name: str = "outlook"
+    access_token: t.Optional[str] = None
 
     def __post_init__(self):
         if not (self.client_id and self.access_config.client_credential and self.user_email):
             raise ValueError(
-                "Please provide one of the following mandatory values:"
+                "Please provide the following mandatory values:"
                 "\nclient_id\nclient_cred\nuser_email",
             )
         self.token_factory = self._acquire_token
 
     @requires_dependencies(["msal"])
     def _acquire_token(self):
+        if self.access_token:
+            return {
+                "access_token": {
+                    "accessToken": self.access_token,
+                },
+            }
         from msal import ConfidentialClientApplication
 
         try:
@@ -68,6 +75,8 @@ class SimpleOutlookConfig(BaseConnectorConfig):
             token = app.acquire_token_for_client(
                 scopes=["https://graph.microsoft.com/.default"],
             )
+            if "access_token" not in token:
+                raise ValueError("Could not obtain access token")
         except ValueError as exc:
             logger.error("Couldn't set up credentials for Outlook")
             raise exc
@@ -77,7 +86,7 @@ class SimpleOutlookConfig(BaseConnectorConfig):
     def _get_client(self):
         from office365.graph_client import GraphClient
 
-        return GraphClient(self.token_factory)
+        return GraphClient(lambda: self.token_factory()["access_token"])
 
 
 @dataclass

@@ -47,6 +47,12 @@ class OutlookCliConfig(SimpleOutlookConfig, CliConfig):
                 type=str,
                 help="Microsoft App client secret",
             ),
+             click.Option(
+                ["--access-token"],
+                default=None,
+                type=str,
+                help="access token",
+            ),
             click.Option(
                 ["--authority-url"],
                 default="https://login.microsoftonline.com",
